@@ -1,0 +1,23 @@
+## Project specific ignores
+data/
+obj/
+lib/
+tools/
+
+## General ignores for C files
+# Object files
+*.o
+
+# Libraries
+*.lib
+*.a
+
+# Shared objects 
+*.so
+*.so.*
+
+# Executables
+*.out
+
+# Core dumps
+*.core
