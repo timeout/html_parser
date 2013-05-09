@@ -7,14 +7,16 @@ extern "C" {
 
 #include "html_parser_text.h"
 
-typedef enum tag_r_E {
-	NO_ATTRIBUTES,
-	TAG_READ, 
-	COMMENT, 
-	DIRECTIVE 
-} tag_reader_E;
+typedef enum tag_reader_e {
+	T_VOID = 1 << 1,
+	T_CMMNT = 1 << 2,
+	T_INSTR = 1 << 3,
+	T_CLOSE = 1 << 4,
+	T_YATTR = 1 << 5,
+	T_NATTR = 1 << 6
+} tag_E;
 
-extern tag_reader_E tag_reader(Text_T *tag, char **ch);
+extern tag_E tag_reader(Text_T *tag, char **ch);
 
 #ifdef __cplusplus
 }
