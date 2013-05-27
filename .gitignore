@@ -4,7 +4,11 @@ obj/
 lib/
 tools/
 
-*.skel
+# skeleton file for a test suite
+tests/test.skel
+
+# project top library, generated anew upone each make
+html_parser.h
 
 # Log files
 *.log
