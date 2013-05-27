@@ -50,7 +50,7 @@ static int Test_attribute_list_reader(T t, void *s, const void *chk)
 		Attr_list_T head = Attr_list_list();
 		Text_T tmp = Text_put(attrs[i]);
 
-		head = attribute_reader(&tmp);
+		head = Attribute_reader(&tmp);
 
 		lr = (char *) Attr_list_print(head);
 
