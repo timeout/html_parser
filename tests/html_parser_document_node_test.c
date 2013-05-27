@@ -7,11 +7,13 @@
 #include "html_parser_text.h"
 #include "html_parser_attribute_list.h"
 #include "html_parser_document_node.h"
+#include "html_parser_tag_lookup.h"
 #include "html_parser_tester.h"
 
 #define T Test_T
 
 /* test data */
+Lookup_T tbl;
 
 /* test functions */
 static int Test_node_new_tag(T t, void *, const void *);
@@ -43,6 +45,8 @@ int main(int argc, const char *argv[])
 	
 	Fmt_fprint(stderr, "==> Starting %s <==\n", __FILE__);
 
+	tbl = Tag_lookup_init();
+
 	suite = Test_init();
 
 	Test_add(suite, Test_node_new_tag, (void *) &tag_node, 
@@ -69,6 +73,7 @@ int main(int argc, const char *argv[])
 	Test_print_results(suite);
 
 	Test_free(&suite);
+	Tag_lookup_free(&tbl);
 
 	return 0;
 }
@@ -80,7 +85,7 @@ static int Test_node_new_tag(T t, void *s, const void *chk)
 
 	assert(n && *n);
 
-	*tn = Node_new_tag(n, NULL);
+	*tn = Node_new_tag(Tag_lookup_tag(&tbl, n), n, NULL);
 	assert(*tn);
 
 	TEST_FUNC_NAME(t);
@@ -107,7 +112,7 @@ static int Test_node_type_tag(T t, void *s, const void *chk)
 {
 	Node_T *tn = (Node_T *) chk;
 
-	assert(TAG_NODE == Node_type(*tn));
+	assert(C_TAGND == Node_type(*tn));
 
 	TEST_FUNC_NAME(t);
 
@@ -118,7 +123,7 @@ static int Test_node_type_content(T t, void *s, const void *chk)
 {
 	Node_T *cn = (Node_T *) chk;
 
-	assert(CONTENT_NODE == Node_type(*cn));
+	assert(C_CNTND == Node_type(*cn));
 
 	TEST_FUNC_NAME(t);
 
@@ -177,9 +182,9 @@ static int Test_node_last_sibling(T t, void *s, const void *chk)
 	Node_T *cn = (Node_T *) chk; 	/* cn has a sibling <em> */
 
 	/* create and add some siblings */
-	older = Node_new_tag(Atom_str("strong"), NULL);
-	younger = Node_new_tag(Atom_str("i"), NULL);
-	youngest = Node_new_tag(Atom_str("b"), NULL);
+	older = Node_new_tag(Tag_lookup_tag(&tbl, "strong"), Atom_str("strong"), NULL);
+	younger = Node_new_tag(Tag_lookup_tag(&tbl, "i"), Atom_str("i"), NULL);
+	youngest = Node_new_tag(Tag_lookup_tag(&tbl, "b"), Atom_str("b"), NULL);
 
 	Node_add_sibling(&older, &younger);
 	Node_add_sibling(&younger, &youngest);
@@ -217,7 +222,7 @@ static int Test_node_add_child(T t, void *s, const void *chk)
 static int Test_node_add_sibling(T t, void *s, const void *chk)
 {
 	Node_T *cn = (Node_T *) s;
-	Node_T em = Node_new_tag("em", NULL);
+	Node_T em = Node_new_tag(Tag_lookup_tag(&tbl, "em"), "em", NULL);
 
 	Node_add_sibling(cn, &em);
 

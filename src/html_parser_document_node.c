@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include "html_parser_types.h"
 #include "html_parser_assert.h"
 #include "html_parser_mem.h"
 #include "html_parser_fmt.h"
@@ -10,11 +11,12 @@
 
 /* type definition */
 struct T {
-	Elem_E node_t;
+	Chunk_E cf;
 	struct T *sibling;
 	union {
 		struct tag {
-			const char *name;
+			Tag_E tf; 		/* { T_OPTNL, T_STRCT, T_VOID } */
+			const char *name; 	/* atom */
 			Attr_list_T *attrs;
 			struct T *child;
 		} *tag;
@@ -28,7 +30,7 @@ struct T {
 static char *print_tag(T *n);
 static char *print_content(T *n);
 
-T Node_new_tag(const char *name, Attr_list_T *attrs)
+T Node_new_tag(Tag_E tf, const char *name, Attr_list_T *attrs)
 {
 	T node;
 	struct tag *t;
@@ -36,10 +38,11 @@ T Node_new_tag(const char *name, Attr_list_T *attrs)
 	assert(name);
 
 	NEW(node);
-	node->node_t = TAG_NODE;
+	node->cf = C_TAGND;
 	node->sibling = NULL;
 
 	NEW(t);
+	t->tf = tf;
 	t->name = name;
 	t->attrs = attrs;
 	t->child = NULL;
@@ -57,7 +60,7 @@ T Node_new_content(const char *text)
 	assert(text && *text);
 
 	NEW(node);
-	node->node_t = CONTENT_NODE;
+	node->cf = C_CNTND;
 	node->sibling = NULL;
 
 	NEW(c);
@@ -68,11 +71,35 @@ T Node_new_content(const char *text)
 	return node;
 }
 
-Elem_E Node_type(T n)
+T Node_clone(T n)
+{
+	T cl;
+
+	if (C_TAGND == Node_type(n)) {
+		Attr_list_T *lp = Node_attr_list(n);
+		Attr_list_T cl_list = Attr_list_clone(*lp);
+		cl = Node_new_tag(Node_tag_type(n), Node_name(n),
+				&cl_list);
+	} else {
+		const char *tmp = Fmt_string("%s", n->type.content->text);
+		cl = Node_new_content(tmp);
+	}
+	return NULL;
+}
+
+Chunk_E Node_type(T n)
 {
 	assert(n);
 
-	return n->node_t;
+	return n->cf;
+}
+
+Tag_E Node_tag_type(T n)
+{
+	assert(n);
+	assert(n->cf == C_TAGND);
+
+	return n->type.tag->tf;
 }
 
 int Node_has_child(T *n)
@@ -81,7 +108,7 @@ int Node_has_child(T *n)
 
 	assert(n && *n);
 
-	if (((*n)->node_t == TAG_NODE) && 
+	if (((*n)->cf == C_TAGND) && 
 			((*n)->type.tag->child != NULL))
 		ret = 1;
 
@@ -119,20 +146,20 @@ T *Node_last_sibling(T *n)
 	return tmp;
 }
 
-const char *Node_name(T *n)
+const char *Node_name(T n)
 {
-	assert(n && *n);
-	assert((*n)->node_t == TAG_NODE);
+	assert(n);
+	/*assert((*n)->cf == C_TAGND);*/
 
-	return (*n)->type.tag->name;
+	return n->type.tag->name;
 }
 
-Attr_list_T *Node_attr_list(T *n)
+Attr_list_T *Node_attr_list(T n)
 {
-	assert(n && *n);
-	assert((*n)->node_t == TAG_NODE);
+	assert(n);
+	assert(n->cf == C_TAGND);
 
-	return (*n)->type.tag->attrs;
+	return n->type.tag->attrs;
 }
 
 T *Node_add_child(T *parent, T *child)
@@ -160,7 +187,7 @@ const char *Node_print(T *n)
 
 	assert(*n);
 
-	if (TAG_NODE == Node_type(*n)) {
+	if (C_TAGND == Node_type(*n)) {
 		out = print_tag(n);
 	} else {
 		out = print_content(n);
@@ -173,7 +200,7 @@ void Node_free(T *n)
 {
 	assert(n && *n);
 
-	if (TAG_NODE == Node_type(*n)) {
+	if (C_TAGND == Node_type(*n)) {
 		/* name is an atom i.e. don't free it */
 		struct tag *tmp = (*n)->type.tag;
 		if (tmp->attrs)
