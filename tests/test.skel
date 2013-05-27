@@ -1,9 +1,7 @@
 #include <string.h>
 #include "html_parser_assert.h"
-#include "html_parser_mem.h"
 #include "html_parser_fmt.h"
-#include "html_parser_attribute_rep.h"
-#include "html_parser_attribute_list.h"
+#include "html_parser_tag_lookup.h"
 #include "html_parser_tester.h"
 
 #define T Test_T
@@ -14,6 +12,19 @@
 
 int main(int argc, const char *argv[])
 {
+	T suite;
 	
+	Fmt_fprint(stderr, "==> Starting %s <==\n", __FILE__);
+
+	suite = Test_init();
+
+	Test_add(suite, <func_name>, (void *) doc,
+			(const void *) pathname);
+
+	Test_all_run(suite);
+	Test_print_results(suite);
+
+	Test_free(&suite);
+
 	return 0;
 }
