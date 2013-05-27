@@ -4,6 +4,9 @@ obj/
 lib/
 tools/
 
+# Log files
+*.log
+
 ## General ignores for C files
 # Object files
 *.o
