@@ -62,6 +62,23 @@ Attr_rep_T Attr_list_dequeue(T head)
 	return attr;
 }
 
+T Attr_list_clone(T head)
+{
+	T tmp;
+	T cl = Attr_list_list();
+
+	assert(head && head->next);
+
+	for (tmp = head->next->next->next; tmp != head->next->next; tmp = tmp->next) {
+		Attr_rep_T rep_cl = Attr_rep_clone(tmp->attr);
+		cl = Attr_list_enqueue(cl, rep_cl);
+	}
+	
+	assert(cl);	
+
+	return cl;
+}
+
 int Attr_list_length(T head)
 {
 	int count = 0;

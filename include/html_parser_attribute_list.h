@@ -14,6 +14,7 @@ extern T Attr_list_list(void);
 extern int Attr_list_length(T attrs);
 extern T Attr_list_enqueue(T attrs, Attr_rep_T attr);
 extern Attr_rep_T Attr_list_dequeue(T head);
+extern T Attr_list_clone(T attrs);
 extern void Attr_list_free(T *attrs);
 extern const char *Attr_list_print(T attrs);
 
