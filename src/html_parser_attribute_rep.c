@@ -26,6 +26,19 @@ T Attr_rep_new(char *name, char *value)
 	return new_attr;
 }
 
+T Attr_rep_clone(T attr)
+{
+	T cl_attr;
+
+	assert(attr);
+
+	NEW(cl_attr);
+	cl_attr->name = attr->name; 		/* atom */
+	cl_attr->value = Fmt_string("%s", attr->value);
+
+	return cl_attr;
+}
+
 const char *Attr_rep_name(T attr)
 {
 	assert(attr && attr->name);

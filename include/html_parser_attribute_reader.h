@@ -8,7 +8,7 @@ extern "C" {
 #include "html_parser_text.h"
 #include "html_parser_attribute_list.h"
 
-extern Attr_list_T attribute_reader(Text_T *tag);
+extern Attr_list_T Attribute_reader(Text_T *tag_chunk);
 
 #ifdef __cplusplus
 }

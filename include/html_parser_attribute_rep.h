@@ -10,6 +10,7 @@ extern "C" {
 typedef struct T *T;
 
 extern T Attr_rep_new(char *name, char *value);
+extern T Attr_rep_clone(T attr);
 extern const char *Attr_rep_name(T attr);
 extern const char *Attr_rep_value(T attr);
 extern char *Attr_rep_change_value(T attr, char *new_value);

@@ -25,6 +25,7 @@ struct val_data {
 
 /* test functions */
 static int Test_attr_rep_new(T t, void *, const void *);
+static int Test_attr_rep_clone(T t, void *, const void *);
 static int Test_attr_rep_name(T t, void *, const void *);
 static int Test_attr_rep_value(T t, void *, const void *);
 static int Test_attr_rep_change_value(T t, void *, const void *);
@@ -56,6 +57,7 @@ int main(int argc, const char *argv[])
 
 	suite = Test_init();
 	Test_add(suite, Test_attr_rep_new, (void *) &a, (const void *) td);
+	Test_add(suite, Test_attr_rep_clone, PREV_INPUT(suite), NULL);
 	Test_add(suite, Test_attr_rep_name, Test_input(suite, Test_curr(suite)), 
 			(const void *) nd);
 	Test_add(suite, Test_attr_rep_value, Test_input(suite, Test_curr(suite)), 
@@ -91,6 +93,25 @@ static int Test_attr_rep_new(T t, void *s, const void *chk)
 
 	TEST_FUNC_NAME(t);
 	TEST_FUNC_OUT(t, Attr_rep_print(*a));
+
+	return TEST_SUCCESS;
+}
+
+static int Test_attr_rep_clone(T t, void *s, const void *chk)
+{
+	Attr_rep_T cl;
+	Attr_rep_T *a = (Attr_rep_T *) s;
+
+	assert(a && *a);
+	TEST_FUNC_NAME(t);
+
+	cl = Attr_rep_clone(*a);
+	assert(cl);
+
+	Attr_rep_change_value(cl, "block block-found");
+	TEST_FUNC_OUT(t, Fmt_string("%s", Attr_rep_print(cl)));
+
+	Attr_rep_free(&cl);
 
 	return TEST_SUCCESS;
 }

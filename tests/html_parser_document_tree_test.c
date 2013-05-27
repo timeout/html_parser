@@ -5,6 +5,7 @@
 #include "html_parser_fmt.h"
 #include "html_parser_document_node.h"
 #include "html_parser_document_tree.h"
+#include "html_parser_tag_lookup.h"
 #include "html_parser_tester.h"
 
 #define T Test_T
@@ -12,6 +13,7 @@
 #define NODE_SIZE 6
 
 /* test data */
+Lookup_T tbl;
 
 /* static function prototypes */
 static Node_T *init_nodes(void);
@@ -20,7 +22,9 @@ static Node_T *init_nodes(void);
 static int Test_doc_tree_tree(T t, void *, const void *);
 static int Test_doc_tree_insert(T t, void *, const void *);
 static int Test_doc_tree_end_tag(T t, void *, const void *);
+static int Test_doc_tree_size(T t, void *, const void *);
 static int Test_doc_tree_print(T t, void *, const void *);
+static int Test_doc_tree_print_content(T t, void *, const void *);
 static int Test_doc_tree_free(T t, void *, const void *);
 
 int main(int argc, const char *argv[])
@@ -32,8 +36,8 @@ int main(int argc, const char *argv[])
 	
 	Fmt_fprint(stderr, "==> Starting %s <==\n", __FILE__);
 
+	tbl = Tag_lookup_init();
 	nodes = init_nodes();
-
 	suite = Test_init();
 
 	Test_add(suite, Test_doc_tree_tree, (void *) &d, NULL);
@@ -41,13 +45,17 @@ int main(int argc, const char *argv[])
 			(const void *) nodes);
 	Test_add(suite, Test_doc_tree_end_tag, PREV_INPUT(suite),
 			(const void *) ct);
+	Test_add(suite, Test_doc_tree_size, PREV_INPUT(suite),
+			(const void *) ct);
 	Test_add(suite, Test_doc_tree_print, PREV_INPUT(suite), NULL);
+	Test_add(suite, Test_doc_tree_print_content, PREV_INPUT(suite), NULL);
 	Test_add(suite, Test_doc_tree_free, PREV_INPUT(suite), NULL);
 
 	Test_all_run(suite);
 	Test_print_results(suite);
 
 	Test_free(&suite);
+	Tag_lookup_free(&tbl);
 
 	return 0;
 }
@@ -96,6 +104,16 @@ static int Test_doc_tree_end_tag(T t, void *s, const void *chk)
 	return TEST_SUCCESS;
 }
 
+static int Test_doc_tree_size(T t, void *s, const void *chk)
+{
+	Doc_tree_T *doc = (Doc_tree_T *) s;
+	
+	TEST_FUNC_NAME(t);
+	TEST_FUNC_OUT(t, Fmt_string("%d", Doc_tree_size(*doc)));
+
+	return TEST_SUCCESS;
+}
+
 static int Test_doc_tree_print(T t, void *s, const void *chk)
 {
 	Doc_tree_T *doc = (Doc_tree_T *) s;
@@ -104,6 +122,16 @@ static int Test_doc_tree_print(T t, void *s, const void *chk)
 	TEST_FUNC_OUT(t, Doc_tree_print(*doc));
 
 	return TEST_SUCCESS;
+}
+
+static int Test_doc_tree_print_content(T t, void *s, const void *chk)
+{
+	Doc_tree_T *doc = (Doc_tree_T *) s;
+
+	TEST_FUNC_NAME(t);
+	TEST_FUNC_OUT(t, Doc_tree_print_context(*doc));
+
+	return TEST_FAIL;
 }
 
 static int Test_doc_tree_free(T t, void *s, const void *chk)
@@ -121,10 +149,10 @@ static Node_T *init_nodes(void)
 {
 	Node_T *n = ALLOC(NODE_SIZE * sizeof(*n));
 
-	n[0] = Node_new_tag(Atom_str("html"), NULL);
-	n[1] = Node_new_tag(Atom_str("body"), NULL);
-	n[2] = Node_new_tag(Atom_str("p"), NULL);
-	n[3] = Node_new_tag(Atom_str("em"), NULL);
+	n[0] = Node_new_tag(Tag_lookup_tag(&tbl, "html"), Atom_str("html"), NULL);
+	n[1] = Node_new_tag(Tag_lookup_tag(&tbl, "body"), Atom_str("body"), NULL);
+	n[2] = Node_new_tag(Tag_lookup_tag(&tbl, "p"), Atom_str("p"), NULL);
+	n[3] = Node_new_tag(Tag_lookup_tag(&tbl, "em"), Atom_str("em"), NULL);
 	n[4] = Node_new_content(Fmt_string("Harlem Shuffle"));
 	n[5] = Node_new_content(Fmt_string("Hold Back"));
 

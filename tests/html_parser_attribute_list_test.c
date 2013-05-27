@@ -18,6 +18,7 @@ static int Test_attr_list_enqueue(T t, void *, const void *);
 static int Test_attr_list_dequeue(T t, void *, const void *);
 static int Test_attr_list_length(T t, void *, const void *);
 static int Test_attr_list_print(T t, void *, const void *);
+static int Test_attr_list_clone(T t, void *, const void *);
 static int Test_attr_list_free(T t, void *, const void *);
 
 /* static function prototypes */
@@ -38,8 +39,8 @@ int main(int argc, const char *argv[])
 	Test_add(suite, Test_attr_list_enqueue, PREV_INPUT(suite),
 			(const void *) reps);
 	Test_add(suite, Test_attr_list_dequeue, PREV_INPUT(suite), NULL);
-	Test_add(suite, Test_attr_list_length, PREV_INPUT(suite),
-			(const void *) &reps);
+	Test_add(suite, Test_attr_list_length, PREV_INPUT(suite), NULL);
+	Test_add(suite, Test_attr_list_clone, PREV_INPUT(suite), NULL);
 	Test_add(suite, Test_attr_list_print, PREV_INPUT(suite), NULL);
 	Test_add(suite, Test_attr_list_free, PREV_INPUT(suite), NULL);
 
@@ -132,6 +133,30 @@ static int Test_attr_list_print(T t, void *in, const void *chk)
 
 	TEST_FUNC_NAME(t);
 	TEST_FUNC_OUT(t, Fmt_string("%s", Attr_list_print(*head)));
+
+	return TEST_SUCCESS;
+}
+
+static int Test_attr_list_clone(T t, void *in, const void *chk)
+{
+	Attr_list_T cl;
+	Attr_rep_T tmp;
+	Attr_list_T *head = (Attr_list_T *) in;
+
+	assert(head && *head);
+
+	Fmt_fprint(stdout, "%s", Attr_list_print(*head));
+
+	cl = Attr_list_clone(*head);
+	assert(Attr_list_length(*head) == Attr_list_length(cl));
+
+	tmp = Attr_list_dequeue(cl);
+	assert(tmp);
+
+	TEST_FUNC_NAME(t);
+	TEST_FUNC_OUT(t, Fmt_string("%s", Attr_list_print(cl)));
+
+	Attr_list_free(&cl);
 
 	return TEST_SUCCESS;
 }

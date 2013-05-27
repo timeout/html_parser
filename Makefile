@@ -2,12 +2,13 @@ SHELL:=/bin/zsh
 TOP:=$(shell pwd)
 
 CII_OBJECTS=html_parser_assert.o html_parser_atom.o html_parser_except.o \
-	    	html_parser_fmt.o html_parser_mem.o html_parser_text.o \
-	    	html_parser_tester.o
+	    	html_parser_fmt.o html_parser_mem.o html_parser_arith.o \
+		html_parser_set.o html_parser_text.o html_parser_tester.o
 PARSER_OBJECTS=html_parser_attribute_rep.o  html_parser_attribute_list.o \
 		html_parser_tag_reader.o html_parser_attribute_reader.o \
 		html_parser_document_node.o html_parser_document_stack.o \
-	       	html_parser_document_tree.o
+	       	html_parser_document_tree.o html_parser_file_reader.o \
+		html_parser_tag_lookup.o html_parser_document_builder.o
 CII=libcii.a
 PARSER_LIB=libhtml_parser.a
 P=html_parser
@@ -32,7 +33,7 @@ $(PARSER_LIB): $(PARSER_OBJECTS)
 	for f in $(PARSER_OBJECTS); do ar -rcs $(LIB_DIR)/$@ $(OBJ_DIR)/$$f; done
 
 html_parser_assert.o: $(SRC_DIR)/html_parser_assert.c
-	@mkdir -p $(LIB_DIR) $(OBJ_DIR) $(TOOLS_DIR)
+	@mkdir -p $(LIB_DIR) $(OBJ_DIR) $(TOOLS_DIR) 	# nasty way of bootstrapping dirs
 	$(CC) $(CFLAGS) -c -o $(OBJ_DIR)/$@ $<
 
 html_parser_atom.o: $(SRC_DIR)/html_parser_atom.c
@@ -45,6 +46,12 @@ html_parser_fmt.o: $(SRC_DIR)/html_parser_fmt.c
 	$(CC) $(CFLAGS) -c -o $(OBJ_DIR)/$@ $<
 
 html_parser_mem.o: $(SRC_DIR)/html_parser_mem.c
+	$(CC) $(CFLAGS) -c -o $(OBJ_DIR)/$@ $<
+
+html_parser_arith.o: $(SRC_DIR)/html_parser_arith.c
+	$(CC) $(CFLAGS) -c -o $(OBJ_DIR)/$@ $<
+
+html_parser_set.o: $(SRC_DIR)/html_parser_set.c
 	$(CC) $(CFLAGS) -c -o $(OBJ_DIR)/$@ $<
 
 html_parser_tester.o: $(SRC_DIR)/html_parser_tester.c
@@ -65,6 +72,9 @@ html_parser_tag_reader.o: $(SRC_DIR)/html_parser_tag_reader.c
 html_parser_attribute_reader.o: $(SRC_DIR)/html_parser_attribute_reader.c
 	$(CC) $(CFLAGS) -c -o $(OBJ_DIR)/$@ $<
 
+html_parser_tag_lookup.o: $(SRC_DIR)/html_parser_tag_lookup.c
+	$(CC) $(CFLAGS) -c -o $(OBJ_DIR)/$@ $<
+
 html_parser_document_node.o: $(SRC_DIR)/html_parser_document_node.c
 	$(CC) $(CFLAGS) -c -o $(OBJ_DIR)/$@ $<
 
@@ -74,11 +84,21 @@ html_parser_document_stack.o: $(SRC_DIR)/html_parser_document_stack.c
 html_parser_document_tree.o: $(SRC_DIR)/html_parser_document_tree.c
 	$(CC) $(CFLAGS) -c -o $(OBJ_DIR)/$@ $<
 
+html_parser_file_reader.o: $(SRC_DIR)/html_parser_file_reader.c
+	$(CC) $(CFLAGS) -c -o $(OBJ_DIR)/$@ $<
+
+html_parser_document_builder.o: $(SRC_DIR)/html_parser_document_builder.c
+	$(CC) $(CFLAGS) -c -o $(OBJ_DIR)/$@ $<
+
 tests: $(CII) $(PARSER_LIB)
 	for f in $(PARSER_OBJECTS); do \
 		$(CC) $(LDFLAGS) -o $(TESTS_DIR)/$${f%\.*}.out \
 			$(TESTS_DIR)/$${f%\.*}_test.c $(LDLIBS); \
 	done;
+
+.PHONY: tests-run
+
+tests-run: tests
 	# run any tests
 	for f in $(PARSER_OBJECTS); do ./$(TESTS_DIR)/$${f%\.*}.out; done
 

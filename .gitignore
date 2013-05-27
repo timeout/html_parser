@@ -4,6 +4,15 @@ obj/
 lib/
 tools/
 
+# skeleton file for a test suite
+tests/test.skel
+
+# project top library, generated anew upone each make
+html_parser.h
+
+# Log files
+*.log
+
 ## General ignores for C files
 # Object files
 *.o

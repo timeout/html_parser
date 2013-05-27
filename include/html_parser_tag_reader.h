@@ -5,16 +5,11 @@
 extern "C" {
 #endif
 
+#include "html_parser_types.h"
 #include "html_parser_text.h"
+#include "html_parser_tag_lookup.h"
 
-typedef enum tag_r_E {
-	NO_ATTRIBUTES,
-	TAG_READ, 
-	COMMENT, 
-	DIRECTIVE 
-} tag_reader_E;
-
-extern tag_reader_E tag_reader(Text_T *tag, char **ch);
+extern Tag_E Tag_reader_reader(Text_T *tag, char **ch, Lookup_T *tbl);
 
 #ifdef __cplusplus
 }
