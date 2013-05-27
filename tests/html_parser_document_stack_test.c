@@ -5,6 +5,7 @@
 #include "html_parser_fmt.h"
 #include "html_parser_document_node.h"
 #include "html_parser_document_stack.h"
+#include "html_parser_tag_lookup.h"
 #include "html_parser_tester.h"
 
 #define T Test_T
@@ -12,6 +13,7 @@
 #define NODE_SIZE 4
 
 /* test data */
+Lookup_T tbl;
 
 /* static function prototypes */
 static Node_T *init_nodes(void);
@@ -35,6 +37,7 @@ int main(int argc, const char *argv[])
 
 	Fmt_fprint(stderr, "==> Starting %s <==\n", __FILE__);
 
+	tbl = Tag_lookup_init();
 	nodes = init_nodes();
 	suite = Test_init();
 
@@ -54,6 +57,7 @@ int main(int argc, const char *argv[])
 	Test_print_results(suite);
 
 	Test_free(&suite);
+	Tag_lookup_free(&tbl);
 
 	return 0;
 }
@@ -168,10 +172,10 @@ static Node_T *init_nodes(void)
 {
 	Node_T *n = ALLOC(NODE_SIZE * sizeof(*n));
 
-	n[0] = Node_new_tag(Atom_str("html"), NULL);
-	n[1] = Node_new_tag(Atom_str("body"), NULL);
-	n[2] = Node_new_tag(Atom_str("p"), NULL);
-	n[3] = Node_new_tag(Atom_str("em"), NULL);
+	n[0] = Node_new_tag(Tag_lookup_tag(&tbl, "html"), Atom_str("html"), NULL);
+	n[1] = Node_new_tag(Tag_lookup_tag(&tbl, "body"), Atom_str("body"), NULL);
+	n[2] = Node_new_tag(Tag_lookup_tag(&tbl, "p"), Atom_str("p"), NULL);
+	n[3] = Node_new_tag(Tag_lookup_tag(&tbl, "em"), Atom_str("em"), NULL);
 
 	return n;
 }

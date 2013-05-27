@@ -63,7 +63,7 @@ int Stack_find(T stk, const char *tag_name)
 		struct elem *t = stk->head;
 
 		while (index++ < stk->count) {
-			if (tag_name == Node_name(t->n))
+			if (tag_name == Node_name(*t->n))
 				break;
 
 			t = t->link;
