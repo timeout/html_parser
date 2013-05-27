@@ -4,6 +4,8 @@ obj/
 lib/
 tools/
 
+*.skel
+
 # Log files
 *.log
 
