@@ -24,6 +24,9 @@ T Attr_list_list(void)
 	return e;
 }
 
+/* static functio prototypes */
+static void map(T head, void apply(Attr_rep_T *r, void *cl), void *cl);
+
 T Attr_list_enqueue(T head, Attr_rep_T new_attr)
 {
 	T n, tmp;
@@ -131,3 +134,47 @@ const char *Attr_list_print(T head)
 
 	return Text_get(NULL, -1, buf);
 }
+
+int Attr_list_search(T *attrs, const char *name, char *val)
+{
+	int ret = 0;
+	T tmp;
+
+	if ((*attrs)->next == (*attrs)->next->next)
+		return ret;
+
+	if (!name & !val) return ret; 	/* stupid */
+
+	for (tmp = (*attrs)->next->next->next; !ret && tmp != (*attrs)->next;
+			tmp = tmp->next) {
+
+		Attr_rep_T a = tmp->attr;
+		const char *v = Attr_rep_value(a);
+
+		if (!name && val)
+			ret = !strcmp(v, val);
+		else if (name && !val)
+			ret = Attr_rep_isname(a, name);
+		else {
+			ret = !strcmp(v, val) && Attr_rep_isname(a, name);
+		}
+	}
+
+	return ret;
+}
+
+static void map(T head, void apply(Attr_rep_T *r, void *cl), void *cl)
+{
+	T tmp;
+
+	if (head->next == head->next->next)
+		return;
+
+	tmp = head->next->next->next;
+	while (tmp != head->next) {
+		Attr_rep_T rep = tmp->attr;
+		apply(&rep, cl);
+		tmp = tmp->next;
+	}
+}
+
