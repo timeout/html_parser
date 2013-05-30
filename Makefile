@@ -8,7 +8,8 @@ PARSER_OBJECTS=html_parser_attribute_rep.o  html_parser_attribute_list.o \
 		html_parser_tag_reader.o html_parser_attribute_reader.o \
 		html_parser_document_node.o html_parser_document_stack.o \
 	       	html_parser_document_tree.o html_parser_file_reader.o \
-		html_parser_tag_lookup.o html_parser_document_builder.o
+		html_parser_tag_lookup.o html_parser_document_builder.o \
+		html_parser_document_search.o
 CII=libcii.a
 PARSER_LIB=libhtml_parser.a
 P=html_parser
@@ -88,6 +89,9 @@ html_parser_file_reader.o: $(SRC_DIR)/html_parser_file_reader.c
 	$(CC) $(CFLAGS) -c -o $(OBJ_DIR)/$@ $<
 
 html_parser_document_builder.o: $(SRC_DIR)/html_parser_document_builder.c
+	$(CC) $(CFLAGS) -c -o $(OBJ_DIR)/$@ $<
+
+html_parser_document_search.o: $(SRC_DIR)/html_parser_document_search.c
 	$(CC) $(CFLAGS) -c -o $(OBJ_DIR)/$@ $<
 
 tests: $(CII) $(PARSER_LIB)
