@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include "html_parser_assert.h"
 #include "html_parser_mem.h"
 #include "html_parser_types.h"
 #include "html_parser_document_stack.h"
@@ -20,47 +21,33 @@ struct T {
 
 /* static function prototypes */
 static T new_match(void);
-static void tag_match(T *resp, Node_T *curr, Node_T *target, const char *tname,
+static T tag_search(Doc_tree_T *tr, const char *tname,
+		const char *aname, const char *aval, int sub_on);
+static int tag_match(T *resp, Node_T *curr, Node_T *target, const char *tname,
 		const char *aname, const char *aval);
 static void cont_match(T *resp, Node_T *curr, Node_T *target, const char *str);
 
-extern int Doc_tree_results(T r)
+int Doc_search_result_size(T r)
 {
+	assert(r);
+
 	return r->count;
 }
 
-extern T Doc_tree_tag_search(Doc_tree_T *tr, const char *tname, 
+/* wrappers */
+T Doc_search_tag(Doc_tree_T *tr, const char *tname, 
 		const char *aname, const char *aval)
 {
-	Node_T *curr, *tmp; 		/* tmp is node of interest */
-	T res = new_match();
-	Stack_T stk = Stack_stack();
-
-	Stack_push(stk, Doc_tree_root(tr));
-	while (!Stack_empty(stk)) {
-		curr = Stack_pop(stk);
-
-		/* sibling */
-		if (Node_has_sibling(curr)) {
-			tmp = Node_sibling(curr);
-			if (C_TAGND == Node_type(*tmp))  /* check type here */
-				tag_match(&res, curr, tmp, tname, aname, aval);
-			Stack_push(stk, tmp);
-		}
-
-		/* child */
-		if (Node_has_child(curr)) {
-			tmp = Node_child(curr);
-			if (C_TAGND == Node_type(*tmp)) 
-				tag_match(&res, curr, tmp, tname, aname, aval);
-			Stack_push(stk, tmp);
-		}
-	}
-
-	return res;
+	return tag_search(tr, tname, aname, aval, 0);
 }
 
-extern T Doc_tree_content_search(Doc_tree_T *tr, const char *str)
+T Doc_search_sub_tree(Doc_tree_T *tr, const char *tname,
+		const char *aname, const char *aval)
+{
+	return tag_search(tr, tname, aname, aval, 1);
+}
+
+T Doc_search_content(Doc_tree_T *tr, const char *str)
 {
 	Node_T *curr, *tmp; 		/* tmp is node of interest */
 	T res = new_match();
@@ -90,6 +77,18 @@ extern T Doc_tree_content_search(Doc_tree_T *tr, const char *str)
 	return res;
 }
 
+void Doc_search_free(T *r)
+{
+	struct m *tmp = (*r)->el;
+
+	while (tmp != NULL) {
+		(*r)->el = tmp->link;
+		FREE(tmp);
+	}
+
+	FREE(*r);
+}
+
 static T new_match(void)
 {
 	T new_match;	
@@ -99,6 +98,78 @@ static T new_match(void)
 	new_match->el = NULL;
 
 	return new_match;
+}
+
+static T tag_search(Doc_tree_T *tr, const char *tname,
+		const char *aname, const char *aval, int sub_on)
+{
+	Node_T *curr, *tmp; 		/* tmp is node of interest */
+	T res = new_match();
+	Stack_T stk = Stack_stack();
+
+	Stack_push(stk, Doc_tree_root(tr));
+	while (!Stack_empty(stk)) {
+		curr = Stack_pop(stk);
+
+		/* sibling */
+		if (Node_has_sibling(curr)) {
+			tmp = Node_sibling(curr);
+			if (C_TAGND == Node_type(*tmp))   /* check type here */
+				tag_match(&res, curr, tmp, tname, aname, aval);
+			Stack_push(stk, tmp);
+		}
+
+		/* child */
+		if (Node_has_child(curr)) {
+			tmp = Node_child(curr);
+			if (C_TAGND == Node_type(*tmp) &&
+					tag_match(&res, curr, tmp, tname, aname, aval) &&
+					sub_on)
+				continue;
+			Stack_push(stk, tmp);
+		}
+	}
+
+	return res;
+
+}
+
+/* this is nasty */
+static int tag_match(T *resp, Node_T *curr, Node_T *target, const char *tname,
+		const char *aname, const char *aval)
+{
+	Attr_list_T *alist;
+	struct m *match;
+
+	/* search: as soon as there's a match add the node and return */
+	if (tname && (strcmp(tname, Node_name(*target)) == 0))
+		goto matched;
+
+	alist = Node_attr_list(*target);
+	if (alist && Attr_list_search(alist, aname, aval))
+		goto matched;
+
+	return 0; 	/* no match */
+
+matched:
+	/* create match */
+	NEW(match);
+	match->p = curr;
+	match->n = target;
+	match->link = NULL;
+
+	/* add match to resp */
+	if (Doc_search_result_size(*resp)) {
+		struct m* tmp = (*resp)->el;
+		while (tmp->link != NULL)
+			tmp = tmp->link;
+		tmp->link = match;
+	} else {
+		(*resp)->el = match;
+	}
+	(*resp)->count++;
+
+	return 1;
 }
 
 static void cont_match(T *resp, Node_T *curr, Node_T *target, const char *str)
@@ -115,7 +186,7 @@ static void cont_match(T *resp, Node_T *curr, Node_T *target, const char *str)
 		match->link = NULL;
 
 		/* add match to resp */
-		if (Doc_tree_results(*resp)) {
+		if (Doc_search_result_size(*resp)) {
 			struct m* tmp = (*resp)->el;
 			while (tmp->link != NULL)
 				tmp = tmp->link;
@@ -127,41 +198,5 @@ static void cont_match(T *resp, Node_T *curr, Node_T *target, const char *str)
 	}
 
 	FREE(txt);
-}
-
-/* this is nasty */
-static void tag_match(T *resp, Node_T *curr, Node_T *target, const char *tname,
-		const char *aname, const char *aval)
-{
-	Attr_list_T *alist;
-	struct m *match;
-
-	/* search: as soon as there's a match add the node and return */
-	if (tname && (strcmp(tname, Node_name(*target)) == 0))
-		goto matched;
-
-	alist = Node_attr_list(*target);
-	if (alist && Attr_list_search(alist, aname, aval))
-		goto matched;
-
-	return; 	/* no match */
-
-matched:
-	/* create match */
-	NEW(match);
-	match->p = curr;
-	match->n = target;
-	match->link = NULL;
-
-	/* add match to resp */
-	if (Doc_tree_results(*resp)) {
-		struct m* tmp = (*resp)->el;
-		while (tmp->link != NULL)
-			tmp = tmp->link;
-		tmp->link = match;
-	} else {
-		(*resp)->el = match;
-	}
-	(*resp)->count++;
 }
 
