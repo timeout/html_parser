@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#define TESTER_MAX_SIZE 15 	/* number of tests in suite */
+#define TESTER_MAX_SIZE 20 	/* number of tests in suite */
 #define TEST_SUCCESS 1
 #define TEST_FAIL 0
 
