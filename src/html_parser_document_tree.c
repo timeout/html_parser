@@ -11,232 +11,345 @@
 
 #define T Doc_tree_T
 
-/* typed definition */
+#define INSERT(c, node) \
+	if (Node_has_child((c))) { \
+		Node_add_sibling( last_sibling( Node_child((c)) ), (node) ); \
+		Node_add_parent(curr, node); \
+	} else { \
+		Node_add_child(curr, node); \
+	} \
+
+
+/* type definition */
 struct T {
-	Node_T root;
-	Stack_T st;
+	Node_T *root;
+	Node_T *curr;
 };
 
-/* static function prototypes */
-static void map(T tree, void apply(Node_T **, void *), void *);
-static void dt_print(Node_T **, void *);
-static void dt_print_context(Node_T **, void *);
-static void dt_node_free(Node_T **, void *);
-static void dt_size(Node_T **, void *);
+typedef enum { STATE_INITIAL, CHILD, SIBLING, PARENT, BACK, END, NUM_STATES } state_t;
 
-T Doc_tree_tree(void)
+typedef struct instance_data {
+	int indent;
+	Node_T *n;	
+} instance_data_t;
+
+typedef state_t state_func_t( instance_data_t *data );
+
+/* static prototype functions */
+static Node_T *last_sibling(Node_T *n);
+static Node_T *insert_contents(Node_T *curr, Node_T *n);
+static Node_T *insert_tag(Node_T *curr, Node_T *n);
+static Node_T *insert_tag_optnl(Node_T *curr, Node_T *n);
+static Node_T *insert_tag_void(Node_T *curr, Node_T *n);
+static Node_T *insert_tag_strct(Node_T *curr, Node_T *n);
+static Node_T *end_tag_optopt(Node_T *curr);
+
+static state_t do_state_initial( instance_data_t *data );
+static state_t do_state_child( instance_data_t *data );
+static state_t do_state_sibling( instance_data_t *data );
+static state_t do_state_parent( instance_data_t *data );
+static state_t do_state_back( instance_data_t *data );
+static state_t do_state_end( instance_data_t *data );
+
+static void print_opening(const char *node, int indent);
+static void print_closing(const char *node, int indent);
+static void print_indent(int indent);
+
+state_func_t* const state_table[ NUM_STATES ] = {
+	do_state_initial, do_state_child, do_state_sibling, do_state_parent,
+	do_state_back, do_state_end
+};
+
+state_t run_state( state_t cur_state, instance_data_t *data ) {
+	return state_table[ cur_state ]( data );
+};
+
+
+
+Node_T *Doc_tree_curr(T tr)
 {
-	T new_tree;
+	assert(tr);
 
-	NEW(new_tree);
-
-	new_tree->root = Node_new_tag(T_OPTNL, "/", NULL);
-	new_tree->st = Stack_stack();
-
-	assert(new_tree);
-
-	return new_tree;
+	return tr->curr;
 }
 
-void Doc_tree_insert(T tree, Node_T *n)
+T Doc_tree_insert(T tr, Node_T *n)
 {
-	Node_T *curr = NULL;
+	Chunk_E cntn;
 
-	assert(tree);
 	assert(n && *n);
 
-	if (Stack_empty(tree->st)) {
-		curr = &tree->root;
-	}
-	else {
-		curr = Stack_peek(tree->st);
-	}
+	if (tr == NULL) { 		// insert first node
+		NEW(tr);
+		
+		tr->root = tr->curr = n;
+	} else { 			// operate on tree
+		cntn = Node_type(*n);
+		if (cntn & C_CNTND) {
+			tr->curr = insert_contents(tr->curr, n);
+		} else if (cntn & C_TAGND) {
+			tr->curr = insert_tag(tr->curr, n);
+		} else { 		// default handling
 
-	/* T_OPTNL */
-	if ((C_TAGND == Node_type(*n))
-			&& (T_OPTNL == Node_tag_type(*n)) 
-			&& (T_OPTNL == Node_tag_type(*curr)))
-		Doc_tree_end_tag(tree, Node_name(*curr));
-
-	/* insert */
-	if (Node_has_child(curr)) {
-		Node_T *tmp = Node_last_sibling(Node_child(curr));
-		Node_add_sibling(tmp, n);
-
-		if ((C_TAGND == Node_type(*n)) && 
-				(T_VOID != Node_tag_type(*n)))
-			Stack_push(tree->st, n);
-	} else {
-		Node_add_child(curr, n);
-
-		if ((C_TAGND == Node_type(*n))
-				&& (T_VOID != Node_tag_type(*n)))
-			Stack_push(tree->st, n);
+		}
 	}
 
+	return tr;
 }
 
-
-int Doc_tree_end_tag(T tree, const char *tag_name)
+T Doc_tree_end(T tr, Tag_E tf, const char *tend)
 {
-	int n;
+	assert(tr);
+	assert(tend && *tend);
 
-	assert(tree);
-	assert(tag_name && *tag_name);
+	if (strcmp(Node_name(*tr->curr), tend) == 0) {
+		if (Node_has_parent(tr->curr)) {
+			if (T_OPTNL & tf) {
+				tr->curr = end_tag_optopt(tr->curr);
+			} else {
+				tr->curr = Node_parent(tr->curr);
+			}
+		} else if (Node_has_back(tr->curr)) { 		// top level
+			tr->curr = Node_back(tr->curr);
+		} else {
+			; 		// root element
+		}
+	} else { 			// warning mal-formed document
 
-	n = Stack_find(tree->st, tag_name);
+	}
 
-	if (n) {
-		for (int i = 0; i < n; i++)
-			Stack_pop(tree->st);
+	return tr;
+}
+
+void Doc_tree_print (T tr) {
+	state_t cur_state = STATE_INITIAL;
+	instance_data_t data;
+
+	data.indent = 0;
+	data.n = tr->root;
+
+	do {
+		cur_state = run_state(cur_state , &data);
+	} while ( cur_state != END );
+}
+
+static Node_T *insert_contents(Node_T *curr, Node_T *n)
+{
+	INSERT(curr, n);
+
+	return curr; 			// contents returns parent aka. curr
+}
+
+static Node_T *insert_tag(Node_T *curr, Node_T *n)
+{
+	Node_T *ret = NULL;
+	Tag_E tt = Node_tag_type(*n);
+
+	if (tt & T_OPTNL) {
+		ret = insert_tag_optnl(curr, n);
+	} else if (tt & T_STRCT) {
+		ret = insert_tag_strct(curr, n);
+	} else if (tt & T_VOID) {
+		ret = insert_tag_void(curr, n);
+	} else { 			// default handling
+
+	}
+
+	assert(ret && *ret);
+
+	return ret;
+}
+
+static Node_T *insert_tag_optnl(Node_T *curr, Node_T *n)
+{
+	if (Node_tag_type(*curr) & T_OPTNL) {
+		if (!Node_has_parent(curr)) { 	// top level ~> no parent
+			Node_add_sibling(curr, n);
+			return n;
+		} else {
+			// close curr ~> make curr's parent curr
+			curr = Node_parent(curr);
+		}
+	}
+
+	INSERT(curr, n);
+
+	return n; 		// same as strict
+}
+
+static Node_T *insert_tag_void(Node_T *curr, Node_T *n)
+{
+	INSERT(curr, n);
+
+	return curr; 		// void returns parent, same as content
+}
+
+static Node_T *insert_tag_strct(Node_T *curr, Node_T *n)
+{
+	INSERT(curr, n);
+
+	return n; 		// strict returns pointer to n
+}
+
+static Node_T *last_sibling(Node_T *n)
+{
+	while (Node_has_sibling(n)) {
+		n = Node_sibling(n);
 	}
 
 	return n;
 }
 
-/* Given a node, in particular a node matching a search query, clone the
- * node and all the node's children */
-Node_T Doc_tree_graft(Node_T *match)
+static Node_T *end_tag_optopt(Node_T *curr)
 {
-	Node_T cl;
-	Node_T *curr, *clp;
-	Stack_T stk = Stack_stack();
-	Stack_T cl_stk = Stack_stack();
-
-	assert(match && *match);
-
-	cl = Node_clone(*match);
-
-	Stack_push(stk, match);
-	Stack_push(cl_stk, &cl);
-	while (!Stack_empty(stk)) {
-		curr = Stack_pop(stk);
-		clp = Stack_pop(cl_stk);
-
-		if (Node_has_sibling(curr)) {
-			Node_T *tmp = Node_sibling(curr);
-			Node_T ns = Node_clone(*tmp);
-			Node_add_sibling(clp, &ns);
-			Stack_push(stk, tmp);
-			Stack_push(cl_stk, &ns);
-		}
-
-		if (Node_has_child(curr)) {
-			Node_T *tmp = Node_child(curr);
-			Node_T nc = Node_clone(*tmp);
-			Node_add_child(clp, &nc);
-			Stack_push(stk, tmp);
-			Stack_push(cl_stk, &nc);
-		}
+	Node_T *tmp = Node_back(curr);
+	if (T_OPTNL == Node_tag_type(*tmp)) {
+		return tmp;
 	}
 
-	return cl;
+	return Node_parent(curr);
 }
 
-int Doc_tree_size(T tr)
+static state_t do_state_initial( instance_data_t *data )
 {
-	int s;
+	int indent = data->indent;
+	Node_T *n = data->n;
 
-	map(tr, dt_size, &s);
+	print_opening(Node_print(n), indent);
 
-	return s;
-}
+	if (Node_has_child(n)) {
+		data->indent += 1;
+		data->n = Node_child(n);
+		return CHILD;
+	}
 
-Node_T *Doc_tree_root(T *tr)
-{
-	return &(*tr)->root;
-}
-
-char *Doc_tree_print(T tree)
-{
-	Text_T p = Text_box("", 0);
-
-	Fmt_register('T', Text_fmt);
-
-	map(tree, dt_print, (void *) &p);
-
-	return Fmt_string("%T\n", &p);
-}
-
-extern char *Doc_tree_print_context(T tr)
-{
-	Text_T p = Text_box("", 0);
-
-	Fmt_register('T', Text_fmt);
-
-	map(tr, dt_print_context, (void *) &p);
-
-	return Fmt_string("%T\n", &p);
-}
-
-void Doc_tree_free(T *tree)
-{
-	assert(tree && *tree);
-
-	/* Nodes */
-	map(*tree, dt_node_free, NULL);
-
-	/* doc stack */
-	Stack_free(&(*tree)->st);
-
-	/* tree */
-	FREE(*tree);
-}
-
-static void map(T tree, void apply(Node_T **n, void *cl), void *cl)
-{
-	Node_T *curr = &tree->root;
-	Stack_T stk = Stack_stack();
-
-	assert(apply);
-
-	Stack_push(stk, curr);
-	while (!Stack_empty(stk)) {
-		curr = Stack_pop(stk);
-
-		if (Node_has_sibling(curr)) {
-			Stack_push(stk, Node_sibling(curr));
-		}
-		if (Node_has_child(curr)) {
-			Stack_push(stk, Node_child(curr));
-		}
-
-		apply(&curr, cl);
+	if (Node_has_sibling(n)) {
+		data->n = Node_sibling(n);
+		return SIBLING;
 	}
 }
 
-static void dt_size(Node_T **n, void *cl)
+static state_t do_state_child( instance_data_t *data )
 {
-	int *s = (int *) cl;
+	int indent = data->indent;
+	Node_T *n = data->n;
 
-	*s += 1;
-}
+	print_opening(Node_print(n), indent);
 
-static void dt_print(Node_T **n, void *cl)
-{
-	Text_T *p = (Text_T *) cl;
+	if (Node_has_child(n)) {
+		data->indent += 1;
+		data->n = Node_child(n);
+		return CHILD;
+	}
 
-	assert(n && **n);
+	if (Node_has_sibling(n)) {
+		data->n = Node_sibling(n);
+		return SIBLING;
+	}
 
-	*p = Text_cat(*p, Text_put(Node_print(*n)));
-	*p = Text_cat(*p, Text_put("\n"));
-}
-
-static void dt_print_context(Node_T **n, void *cl)
-{
-	Text_T *p = (Text_T *) cl;
-
-	assert(n && *n);
-
-	if (C_CNTND == Node_type(**n)) {
-		*p = Text_cat(*p, Text_put(Node_print(*n)));
-		*p = Text_cat(*p, Text_put("\n"));
+	if (Node_has_parent(n)) {
+		data->indent -= 1;
+		data->n = Node_parent(n);
+		return PARENT;
 	}
 }
 
-static void dt_node_free(Node_T **n, void *cl)
+static state_t do_state_sibling( instance_data_t *data )
 {
-	assert(n && **n);
+	int indent = data->indent;
+	Node_T *n = data->n;
 
-	Node_free(*n);
+	print_opening(Node_print(n), indent);
+
+	if (Node_has_child(n)) {
+		data->indent += 1;
+		data->n = Node_child(n);
+		return CHILD;
+	}
+
+	if (Node_has_sibling(n)) {
+		data->n = Node_sibling(n);
+		return SIBLING;
+	}
+
+	if (Node_has_parent(n)) {
+		data->indent -= 1;
+		data->n = Node_parent(n);
+		return PARENT;
+	}
+
+	return END;
 }
+
+static state_t do_state_parent( instance_data_t *data )
+{
+	int indent = data->indent;
+	Node_T *n = data->n;
+
+	print_closing(Node_name(*n), indent);
+
+	if (Node_has_sibling(n)) {
+		data->n = Node_sibling(n);
+		return SIBLING;
+	}
+
+	if (Node_has_parent(n)) {
+		data->indent -= 1;
+		data->n = Node_parent(n);
+		return PARENT;
+	}
+
+	if (Node_has_back(n)) {
+		data->indent -= 1;
+		data->n = Node_back(n);
+		return BACK;
+	}
+
+	return END;
+}
+
+static state_t do_state_back( instance_data_t *data )
+{
+	Node_T *n = data->n;
+
+	if (Node_has_back(n)) {
+		data->n = Node_back(n);
+		return BACK;
+	}
+
+	return END;
+}
+
+static state_t do_state_end( instance_data_t *data )
+{
+	Node_T *n = data->n;
+
+	print_closing(Node_name(*n), data->indent);
+}
+
+static void print_opening(const char *node, int indent)
+{
+	char *out = (char *) node;
+	print_indent(indent);
+	Fmt_fprint(stdout, "%s\n", out);
+
+	FREE(out);
+}
+
+static void print_closing(const char *node, int indent)
+{
+	char *out = (char *) node;
+	print_indent(indent);
+	Fmt_fprint(stdout, "</%s>\n", node);
+}
+
+static void print_indent(int indent)
+{
+	int i = indent * INDENT_SIZE;
+
+	while (i >= 0) {
+		putc(' ', stdout);
+		i--;
+	}
+}
+

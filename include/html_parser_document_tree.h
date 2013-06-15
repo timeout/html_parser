@@ -5,26 +5,20 @@
 extern "C" {
 #endif
 
+#include "html_parser_types.h"
 #include "html_parser_document_node.h"
 
 #define T Doc_tree_T
 typedef struct T *T;
 
-extern T Doc_tree_tree(void);
-extern int Doc_tree_size(T tr);
-extern Node_T *Doc_tree_root(T *tr);
+#define INDENT_SIZE 2
 
-extern void Doc_tree_insert(T tr, Node_T *n);
-extern int Doc_tree_end_tag(T tr, const char *tag_name);
+extern Node_T *Doc_tree_curr(T tr);
+extern T Doc_tree_insert(T tr, Node_T *n);
+extern T Doc_tree_end(T tr, Tag_E tf, const char *tend);
 
-/* clone matched node including all children */
-extern Node_T Doc_tree_graft(Node_T *m);
+extern void Doc_tree_print(T tr);
 
-/* remove all descendents of parent with match */
-extern T Doc_tree_trim(T tr, Node_T *match);
-
-extern char *Doc_tree_print(T tr);
-extern char *Doc_tree_print_context(T tr);
 extern void Doc_tree_free(T *tr);
 
 #undef T
