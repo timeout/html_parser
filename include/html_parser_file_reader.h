@@ -8,7 +8,10 @@ extern "C" {
 #include <stdio.h>
 #include "html_parser_text.h"
 
-Text_T *File_reader_reader(const char *pathname, const char *filter);
+#define BUFFSIZE 1024
+	
+// filter is currently useless
+Text_T File_reader_reader(const char *pathname, const char *filter);
 
 #ifdef __cplusplus
 }

@@ -10,38 +10,33 @@
 
 /* static function prototypes */
 
-Text_T *File_reader_reader(const char *pathname, const char *filter)
+Text_T File_reader_reader(const char *pathname, const char *filter)
 {
-	int c, i = 0;
-	char buf[BUFSIZ];
-	Text_T *f;
+	int c, i, max = BUFFSIZE;
+	char *buf = ALLOC(max);
+	Text_T doc;
 	FILE *in;
  
-	NEW(f);
-	*f = Text_box("", 0);
-
+	// debug
 	Fmt_register('T', Text_fmt);
 	Fmt_fprint(stderr, "%s\n", pathname);
-	Fmt_fprint(stderr, "BUFSIZ: %d\n", BUFSIZ);
+	Fmt_fprint(stderr, "BUFFSIZE: %d\n", BUFFSIZE);
 
 	if ((in = fopen(pathname, "r")) == NULL)
 		err(1, "%s", pathname);
 
-	while((c = getc(in)) != EOF) {
-		if (filter == NULL)
-			buf[i++] = c;
-		else if (strchr(filter, c) == NULL) 
-			buf[i++] = c;
-
-		if (i == BUFSIZ) {
-			i = 0;
-			*f = Text_cat(*f, Text_box(buf, BUFSIZ));
+	for (c = fgetc(in), i = 0; c != EOF; c = fgetc(in), i++) {
+		if (i == max) { 		// max buf
+			RESIZE(buf, max <<= 1);
 		}
+
+		buf[i] = c;
 	}
-	*f = Text_cat(*f, Text_box(buf, i));
 
-	Fmt_fprint(stderr, "%T\n", f);
+	doc = Text_put(buf);
 
-	return f;
+	Fmt_fprint(stderr, "%T\n", &doc);
+
+	return doc;
 }
 
