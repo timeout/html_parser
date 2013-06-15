@@ -14,8 +14,6 @@ Attr_list_T Attribute_reader(Text_T *tag_chunk)
 {
 	Attr_list_T attr_list;
 
-	Fmt_register('T', Text_fmt);
-
 	attr_list = Attr_list_list();
 	while (tag_chunk->len > 0) 
 		attr_list = Attr_list_enqueue(attr_list, attribute(tag_chunk));

@@ -20,7 +20,7 @@ int main(int argc, const char *argv[])
 {
 	Test_T suite;
 	char *attrs[ATTR_LIST_SIZE] = {
-		"id=\"genre\"", 
+		"body id=\"genre\"", 
 		"title=\"Eternally Yours\"",
 		"rel=\"stylesheet\" type=\"text/css\" href=\"https://d11xdyzr0div58.cloudfront.net/static/archweb.78c17bb7e94a.css\" media=\"screen, projection\" title=\"Arch Linux Packages\""
 	};
