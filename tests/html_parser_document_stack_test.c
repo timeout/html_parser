@@ -23,7 +23,7 @@ static int Test_stack_stack(T t, void *, const void *);
 static int Test_stack_empty(T t, void *, const void *);
 static int Test_stack_push(T t, void *, const void *);
 static int Test_stack_peek(T t, void *, const void *);
-static int Test_stack_find(T t, void *, const void *);
+// static int Test_stack_find(T t, void *, const void *);
 static int Test_stack_pop(T t, void *, const void *);
 static int Test_stack_free(T t, void *, const void *);
 
@@ -47,8 +47,8 @@ int main(int argc, const char *argv[])
 			(const void *) nodes);
 	Test_add(suite, Test_stack_peek, PREV_INPUT(suite),
 			(const void *) nodes);
-	Test_add(suite, Test_stack_find, PREV_INPUT(suite),
-			(const void *) st);
+//	Test_add(suite, Test_stack_find, PREV_INPUT(suite),
+//			(const void *) st);
 	Test_add(suite, Test_stack_pop, PREV_INPUT(suite),
 			(const void *) nodes);
 	Test_add(suite, Test_stack_free, PREV_INPUT(suite), NULL);

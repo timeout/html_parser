@@ -10,7 +10,7 @@
 struct T {
 	int count;
 	struct elem {
-		Node_T *n;
+		void *n;
 		struct elem *link;
 	} *head;
 };
@@ -33,7 +33,7 @@ int Stack_empty(T stk)
 	return (stk->count == 0);
 }
 
-void Stack_push(T stk, Node_T *n)
+void Stack_push(T stk, void *n)
 {
 	struct elem *t;
 
@@ -45,7 +45,7 @@ void Stack_push(T stk, Node_T *n)
 	stk->count++;
 }
 
-Node_T *Stack_peek(T stk)
+void *Stack_peek(T stk)
 {
 	assert(stk);
 	assert(stk->count > 0);
@@ -53,29 +53,29 @@ Node_T *Stack_peek(T stk)
 	return stk->head->n;
 }
 
-int Stack_find(T stk, const char *tag_name)
-{
-	int index = 0; 		/* 0 : not found */
+/*int Stack_find(T stk, const char *tag_name)*/
+/*{*/
+	/*int index = 0; 		[> 0 : not found <]*/
 
-	assert(stk);
+	/*assert(stk);*/
 
-	if (!Stack_empty(stk)) {
-		struct elem *t = stk->head;
+	/*if (!Stack_empty(stk)) {*/
+		/*struct elem *t = stk->head;*/
 
-		while (index++ < stk->count) {
-			if (tag_name == Node_name(*t->n))
-				break;
+		/*while (index++ < stk->count) {*/
+			/*if (tag_name == Node_name(*t->n))*/
+				/*break;*/
 
-			t = t->link;
-		}
-	}
+			/*t = t->link;*/
+		/*}*/
+	/*}*/
 
-	index = (index > stk->count) ? 0 : index;
+	/*index = (index > stk->count) ? 0 : index;*/
 
-	return index;
-}
+	/*return index;*/
+/*}*/
 
-Node_T *Stack_pop(T stk)
+void *Stack_pop(T stk)
 {
 	Node_T *n;
 	struct elem *t;
