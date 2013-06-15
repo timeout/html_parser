@@ -3,6 +3,7 @@
 #include "html_parser_assert.h"
 #include "html_parser_mem.h"
 #include "html_parser_types.h"
+#include "html_parser_text.h"
 #include "html_parser_document_stack.h"
 #include "html_parser_document_node.h"
 #include "html_parser_document_tree.h"
@@ -26,6 +27,8 @@ static T tag_search(Doc_tree_T *tr, const char *tname,
 static int tag_match(T *resp, Node_T *curr, Node_T *target, const char *tname,
 		const char *aname, const char *aval);
 static void cont_match(T *resp, Node_T *curr, Node_T *target, const char *str);
+static void map(T *resp, void apply(struct m **, void *cl), void *cl);
+static void results_print(struct m**, void *cl);
 
 int Doc_search_result_size(T r)
 {
@@ -114,24 +117,38 @@ static T tag_search(Doc_tree_T *tr, const char *tname,
 		/* sibling */
 		if (Node_has_sibling(curr)) {
 			tmp = Node_sibling(curr);
-			if (C_TAGND == Node_type(*tmp))   /* check type here */
+			if (C_TAGND == Node_type(*tmp)) {  /* check type here */
 				tag_match(&res, curr, tmp, tname, aname, aval);
-			Stack_push(stk, tmp);
+				Stack_push(stk, tmp);
+			}
 		}
 
 		/* child */
 		if (Node_has_child(curr)) {
 			tmp = Node_child(curr);
-			if (C_TAGND == Node_type(*tmp) &&
-					tag_match(&res, curr, tmp, tname, aname, aval) &&
-					sub_on)
-				continue;
-			Stack_push(stk, tmp);
+			if (C_TAGND == Node_type(*tmp)) {
+				if (tag_match(&res, curr, tmp, tname, aname, aval) &&
+						sub_on) {
+					continue;
+				}
+				Stack_push(stk, tmp);
+			}
 		}
 	}
 
 	return res;
 
+}
+
+const char *Doc_search_result_print(T *r)
+{
+	Text_T output = Text_box("", 0);
+
+	Fmt_register('T', Text_fmt);
+
+	map(r, results_print, (void *) &output);
+
+	return Fmt_string("%T\n", &output);
 }
 
 /* this is nasty */
@@ -200,3 +217,31 @@ static void cont_match(T *resp, Node_T *curr, Node_T *target, const char *str)
 	FREE(txt);
 }
 
+static void map(T *resp, void apply(struct m **, void *cl), void *cl)
+{
+	struct m *tmp; 
+
+	assert(resp && *resp);
+	assert(apply);
+
+	tmp = (*resp)->el;
+
+	while (tmp != NULL) {
+		apply(&tmp, cl);
+		tmp = tmp->link;
+	}
+}
+
+static void results_print(struct m **rpp, void *cl)
+{
+	Text_T *output = (Text_T *) cl;
+	Node_T *p = (*rpp)->p;
+	Node_T *n = (*rpp)->n;
+
+	*output = Text_cat(*output, Text_put("predecessor:\n"));
+	*output = Text_cat(*output, Text_put(Node_print(p)));
+	*output = Text_cat(*output, Text_put("\n"));
+	*output = Text_cat(*output, Text_put("match:\n"));
+	*output = Text_cat(*output, Text_put(Node_print(n)));
+	*output = Text_cat(*output, Text_put("\n"));
+}

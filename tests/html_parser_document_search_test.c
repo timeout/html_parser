@@ -26,6 +26,7 @@ int main(int argc, const char *argv[])
 	T suite;
 	/*Match_T *results;*/
 	Doc_tree_T *dt;
+	/*Text_T *doc = File_reader_reader("data/file_reader_test.html", NULL);*/
 	Text_T *doc = File_reader_reader("data/doc_build_sieve_test.html", NULL);
 	s_terms_T *ts, *cs;
 
@@ -76,6 +77,11 @@ static int Test_doc_search_tag(T t, void *s, const void *chk)
 
 	Fmt_fprint(stdout, "results: %d\n", Doc_search_result_size(r1));
 	Fmt_fprint(stdout, "results: %d\n", Doc_search_result_size(r2));
+
+	const char *out = Doc_search_result_print(&r1);
+	Fmt_fprint(stdout, "%s", out);
+
+	FREE(out);
 
 	TEST_FUNC_NAME(t);
 
