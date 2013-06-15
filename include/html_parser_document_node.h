@@ -23,17 +23,23 @@ extern Attr_list_T *Node_attr_list(T n);
 
 extern int Node_has_child(T *n);
 extern int Node_has_sibling(T *n);
+extern int Node_has_back(T *n);
+extern int Node_has_parent(T *n);
+extern int Node_is_first_child(T *n);
+extern T *Node_parent(T *n);
+extern T *Node_back(T *n);
 extern T *Node_child(T *n);
 extern T *Node_sibling(T *n);
-extern T *Node_last_sibling(T *n);
 
 extern T *Node_add_child(T *parent, T *child);
 extern T *Node_add_sibling(T *first, T *second);
+extern T *Node_add_parent(T *parent, T *child);
 
 extern const char *Node_print(T *n);
 extern void Node_free(T *n);
 
 #undef T
+
 #ifdef __cplusplus
 }
 #endif

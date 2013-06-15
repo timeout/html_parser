@@ -12,7 +12,9 @@
 /* type definition */
 struct T {
 	Chunk_E cf;
+	struct T *parent;
 	struct T *sibling;
+	struct T *back;
 	union {
 		struct tag {
 			Tag_E tf; 		/* { T_OPTNL, T_STRCT, T_VOID } */
@@ -39,7 +41,9 @@ T Node_new_tag(Tag_E tf, const char *name, Attr_list_T *attrs)
 
 	NEW(node);
 	node->cf = C_TAGND;
+	node->parent = NULL;
 	node->sibling = NULL;
+	node->back = NULL;
 
 	NEW(t);
 	t->tf = tf;
@@ -61,7 +65,9 @@ T Node_new_content(const char *text)
 
 	NEW(node);
 	node->cf = C_CNTND;
+	node->parent = NULL;
 	node->sibling = NULL;
+	node->back = NULL;
 
 	NEW(c);
 	c->text = text;
@@ -122,6 +128,34 @@ int Node_has_sibling(T *n)
 	return ((*n)->sibling != NULL);
 }
 
+int Node_has_parent(T *n)
+{
+	assert(n && *n);
+
+	return((*n)->parent != NULL);
+}
+
+int Node_has_back(T *n)
+{
+	assert(n && *n);
+
+	return((*n)->back != NULL);
+}
+
+T *Node_parent(T *n)
+{
+	assert(n && *n);
+
+	return (&(*n)->parent);
+}
+
+T *Node_back(T *n)
+{
+	assert(n && *n);
+
+	return (&(*n)->back);
+}
+
 T *Node_child(T *n) 		/* user error if node has no child */
 {
 	assert(n && *n);
@@ -134,16 +168,6 @@ T *Node_sibling(T *n) 		/* user error if node has no sibling */
 	assert(n && *n);
 
 	return (&((*n)->sibling));
-}
-
-T *Node_last_sibling(T *n)
-{
-	Node_T *tmp = n;
-
-	while (Node_has_sibling(tmp)) 
-		tmp = Node_sibling(tmp);
-
-	return tmp;
 }
 
 const char *Node_name(T n)
@@ -166,7 +190,9 @@ T *Node_add_child(T *parent, T *child)
 {
 	assert(parent && child);
 
-	(*parent)->type.tag->child = *child;
+	(*parent)->type.tag->child = *child; 	/* child link */
+	(*child)->back = *parent; 		/* back link */
+	Node_add_parent(parent, child); 	/* parent link */
 
 	return child;
 }
@@ -176,9 +202,20 @@ T *Node_add_sibling(T *first, T *second)
 	assert(first && *first);
 	assert(second && *second);
 
-	(*first)->sibling = *second;
+	(*first)->sibling = *second; 		/* sibling link */
+	(*second)->back = *first; 		/* back link */
 
 	return second;
+}
+
+T *Node_add_parent(T *parent, T *child)
+{
+	assert(parent && *parent);
+	assert(child && *child);
+
+	(*child)->parent = *parent;
+
+	return parent;
 }
 
 const char *Node_print(T *n)
@@ -216,11 +253,11 @@ void Node_free(T *n)
 
 static char *print_tag(T *n)
 {
-	Text_T buf = Text_box("<", 1);
+	Text_T buf = Text_put("<");
 
 	buf = Text_cat(buf, Text_put((*n)->type.tag->name));
 	if ((*n)->type.tag->attrs) {
-		buf = Text_cat(buf, Text_put(" "));
+		buf = Text_cat(buf, Text_box(" ", 1));
 		buf = Text_cat(buf, Text_put(Attr_list_print(*(*n)->type.tag->attrs)));
 	}
 	buf = Text_cat(buf, Text_put(">"));

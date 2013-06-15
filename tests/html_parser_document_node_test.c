@@ -5,6 +5,7 @@
 #include "html_parser_atom.h"
 #include "html_parser_fmt.h"
 #include "html_parser_text.h"
+#include "html_parser_attribute_rep.h"
 #include "html_parser_attribute_list.h"
 #include "html_parser_document_node.h"
 #include "html_parser_tag_lookup.h"
@@ -24,9 +25,11 @@ static int Test_node_has_child(T t, void *, const void *);
 static int Test_node_has_sibling(T t, void *, const void *);
 static int Test_node_child(T t, void *, const void *);
 static int Test_node_sibling(T t, void *, const void *);
-static int Test_node_last_sibling(T t, void *, const void *);
 static int Test_node_add_child(T t, void *, const void *);
 static int Test_node_add_sibling(T t, void *, const void *);
+static int Test_node_parent(T t, void *, const void *);
+static int Test_node_back(T t, void *, const void *);
+static int Test_node_add_parent(T t, void *, const void *);
 static int Test_node_print_tag(T t, void *, const void *);
 static int Test_node_print_content(T t, void *, const void *);
 static int Test_node_free(T t, void *, const void *);
@@ -63,8 +66,9 @@ int main(int argc, const char *argv[])
 	Test_add(suite, Test_node_child, NULL, (const void *) &tag_node);
 	Test_add(suite, Test_node_sibling, (void *) &sibling_node,
 			(const void *) &content_node);
-	Test_add(suite, Test_node_last_sibling, NULL, 
-			(const void *) &content_node);
+	Test_add(suite, Test_node_parent, NULL, NULL);
+	Test_add(suite, Test_node_back, NULL, NULL);
+	Test_add(suite, Test_node_add_parent, NULL, NULL);
 	Test_add(suite, Test_node_print_tag, NULL, (const void *) &tag_node);
 	Test_add(suite, Test_node_print_content, NULL, (void *) &content_node);
 	Test_add(suite, Test_node_free, (void *) &tag_node, NULL);
@@ -176,37 +180,6 @@ static int Test_node_sibling(T t, void *s, const void *chk)
 	return TEST_SUCCESS;
 }
 
-static int Test_node_last_sibling(T t, void *s, const void *chk)
-{
-	Node_T older, younger, youngest, *sn;
-	Node_T *cn = (Node_T *) chk; 	/* cn has a sibling <em> */
-
-	/* create and add some siblings */
-	older = Node_new_tag(Tag_lookup_tag(&tbl, "strong"), Atom_str("strong"), NULL);
-	younger = Node_new_tag(Tag_lookup_tag(&tbl, "i"), Atom_str("i"), NULL);
-	youngest = Node_new_tag(Tag_lookup_tag(&tbl, "b"), Atom_str("b"), NULL);
-
-	Node_add_sibling(&older, &younger);
-	Node_add_sibling(&younger, &youngest);
-	Node_add_sibling(&youngest, cn);
-
-	sn = Node_last_sibling(&older);
-
-	assert(sn == Node_sibling(cn));
-
-	char *msg = (char *) Node_print(sn);
-
-	TEST_FUNC_NAME(t);
-	TEST_FUNC_OUT(t, Fmt_string("%s", msg));
-
-	/* destroy some siblings */
-	Node_free(&older);
-	Node_free(&younger);
-	Node_free(&youngest);
-
-	return TEST_SUCCESS;
-}
-
 static int Test_node_add_child(T t, void *s, const void *chk)
 {
 	Node_T *tn = (Node_T *) s;
@@ -229,6 +202,86 @@ static int Test_node_add_sibling(T t, void *s, const void *chk)
 	TEST_FUNC_NAME(t);
 
 	return Node_has_sibling(cn);
+}
+
+static int Test_node_parent(T t, void *s, const void *chk)
+{
+	int f = 0;
+
+	Attr_list_T alist = Attr_list_list();
+	Attr_rep_T attr1 = Attr_rep_new("id", "loading");
+	Node_T pn;
+	Node_T cn = Node_new_tag(Tag_lookup_tag(&tbl, "h1"), "h1", NULL);
+	Node_T *pnp = NULL;
+
+	alist = Attr_list_enqueue(alist, attr1);
+	pn = Node_new_tag(Tag_lookup_tag(&tbl, "body"), "body", &alist);
+
+	Node_add_child(&pn, &cn); 		// add cn as child to pn
+	pnp = Node_parent(&cn);			// get parent of cn
+
+	Fmt_fprint(stdout, "pn: '%s'\n", Node_print(&pn));
+
+	f = !strcmp(Node_name(pn), Node_name(*pnp)); 
+
+	TEST_FUNC_NAME(t);
+
+	Node_free(&pn);
+	Node_free(&cn);
+
+	return f;
+}
+
+static int Test_node_back(T t, void *s, const void *chk)
+{
+	int f1, f2  = 0;
+	Node_T pn = Node_new_tag(Tag_lookup_tag(&tbl, "body"), "body", NULL);
+	Node_T cn = Node_new_tag(Tag_lookup_tag(&tbl, "h1"), "h1", NULL);
+	Node_T sn = Node_new_tag(Tag_lookup_tag(&tbl, "p"), "p", NULL);
+	Node_T *bnp = NULL;
+
+	Node_add_child(&pn, &cn); 		// add cn as child to pn
+	bnp = Node_back(&cn);
+
+	f1 = !strcmp(Node_print(&pn), Node_print(bnp));
+
+	Node_add_sibling(&cn, &sn);
+	bnp = Node_back(&sn);
+
+	f2 = !strcmp(Node_print(&cn), Node_print(bnp));
+
+	Node_free(&pn);
+	Node_free(&cn);
+	Node_free(&sn);
+
+	TEST_FUNC_NAME(t);
+
+	return f1 && f2;
+}
+
+static int Test_node_add_parent(T t, void *s, const void *chk)
+{
+	int f = 0;
+	Node_T pn = Node_new_tag(Tag_lookup_tag(&tbl, "head"), "head", NULL);
+	Node_T cn = Node_new_tag(Tag_lookup_tag(&tbl, "title"), "title", NULL);
+	Node_T sn = Node_new_tag(Tag_lookup_tag(&tbl, "link"), "link", NULL);
+	Node_T *pnp = NULL;
+
+	Node_add_child(&pn, &cn); 		// add cn as child of pn
+	Node_add_sibling(&cn, &sn); 		// add sn as sibling of cn
+	Node_add_parent(&pn, &sn); 		// hookup parent of sn
+
+	pnp = Node_parent(&sn);
+
+	f = !strcmp(Node_print(&pn), Node_print(pnp));
+	
+	TEST_FUNC_NAME(t);
+
+	Node_free(&pn);
+	Node_free(&cn);
+	Node_free(&sn);
+
+	return f;
 }
 
 static int Test_node_print_tag(T t, void *s, const void *chk)
