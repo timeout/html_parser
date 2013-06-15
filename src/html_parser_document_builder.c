@@ -1,4 +1,4 @@
-
+#include <stdlib.h>
 #include "html_parser_mem.h"
 #include "html_parser_atom.h"
 #include "html_parser_text.h"
@@ -11,29 +11,27 @@
 #include "html_parser_document_tree.h"
 #include "html_parser_document_builder.h"
 
-Doc_tree_T *Doc_builder_builder(Text_T *doc)
+Doc_tree_T Doc_builder_builder(Text_T doc)
 {
-	Doc_tree_T *dt;
-	Text_T chunk;
+	Doc_tree_T tr = NULL;
 	Lookup_T tbl = Tag_lookup_init();
 
-	NEW(dt);
-	*dt = Doc_tree_tree();	
-
-	while ((*doc).len > 0) {
+	while (doc.len > 0) {
 		char *tag;
 		const char *content;
-		Attr_list_T *attrs = NULL;
-		Node_T *n;
 		Tag_E tf;
-		Chunk_E cf = Doc_builder_sieve(doc, &chunk);
+		Text_T chunk;
+		Node_T *n;
 
+		Attr_list_T *attrs = NULL;
+
+		Chunk_E cf = Doc_builder_sieve(&doc, &chunk);
 
 		switch (cf) {
 			case C_TAGND:
 				tf = Tag_reader_reader(&chunk, &tag, &tbl);
 
-				if (tf & T_YATTR) {
+				if (tf & T_YATTR) { 		// get attributes
 					NEW(attrs);
 					*attrs = Attr_list_list();
 					*attrs = Attribute_reader(&chunk);
@@ -42,20 +40,11 @@ Doc_tree_T *Doc_builder_builder(Text_T *doc)
 				if (tf & T_OPTNL || tf & T_STRCT || tf & T_VOID) {
 					NEW(n);
 					*n = Node_new_tag(tf, Atom_str(tag), attrs);
-					Fmt_fprint(stderr, "==========\n");
-					Fmt_fprint(stderr, "[ 2. node: '%s' ]\n",
-							Node_print(n));
-					Fmt_fprint(stderr, "[ insert tf: %s, tag:" 
-							"'%s' ]\n",
-							Tag_type_rep(tf), Atom_str(tag));
-					Fmt_fprint(stderr, "==========\n");
-					Doc_tree_insert(*dt, n);
+					tr = Doc_tree_insert(tr, n);
 				} else if (tf & T_CLOSE) {
-					Doc_tree_end_tag(*dt, tag);
-				} else {
-					Fmt_fprint(stdout, "\033[31mWARNING: '%s'" 
-							" (%s)\033[0m\n", 
-							tag, Tag_type_rep(tf));
+					Doc_tree_end(tr, Tag_lookup_tag(&tbl, tag), tag);
+				} else { 		// error handling
+
 				}
 
 				FREE(tag);
@@ -64,15 +53,15 @@ Doc_tree_T *Doc_builder_builder(Text_T *doc)
 				content = Text_get(NULL, -1, chunk);
 				NEW(n);
 				*n = Node_new_content(content);
-				Doc_tree_insert(*dt, n);
+				Doc_tree_insert(tr, n);
 				break;
 			case C_CNTMT:
-			default:			/* C_ERROR */
+			default:			// error: unknown chunk
 				;
 		}
 	}
 
-	return dt;
+	return tr;
 }
 
 Chunk_E Doc_builder_sieve(Text_T *doc, Text_T *chunk)
@@ -98,6 +87,7 @@ Chunk_E Doc_builder_sieve(Text_T *doc, Text_T *chunk)
 		*doc = Text_sub(*doc, 0, 0);
 	} else if (close == 0) {
 		f = C_ERROR;
+		exit(1);
 	} else if (open < close) { 	/* content */
 		if (Text_upto(*doc, 1, open, Text_nonwhite)) {
 			*chunk = Text_sub(*doc, 1, open);

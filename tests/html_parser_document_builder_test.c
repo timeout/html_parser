@@ -20,17 +20,12 @@ static int Test_doc_build_builder(T t, void *, const void *);
 int main(int argc, const char *argv[])
 {
 	T suite;
-	Text_T chunk;
-	/*Text_T *doc = File_reader_reader("data/doc_build_sieve_test.html", NULL);*/
-	Text_T *doc = File_reader_reader("data/file_reader_test.html", NULL);
 	
-	Fmt_register('T', Text_fmt);
 	Fmt_fprint(stderr, "==> Starting %s <==\n", __FILE__);
 
 	suite = Test_init();
 
-	Test_add(suite, Test_doc_build_sieve, (void *) &chunk,
-			(const void *) doc);
+	Test_add(suite, Test_doc_build_sieve, NULL, NULL);
 	Test_add(suite, Test_doc_build_builder, NULL, NULL);
 
 	Test_all_run(suite);
@@ -41,48 +36,44 @@ int main(int argc, const char *argv[])
 	return 0;
 }
 
-/*extern Elem_E Doc_builder_sieve(Text_T *doc, Text_T *chunk);*/
 static int Test_doc_build_sieve(T t, void *s, const void *chk)
 {
-	Chunk_E f = 0;
+	Chunk_E f;
 	Text_T chunk;
-	Text_T *doc = (Text_T *) chk;
 
-	*doc = Text_sub(*doc, 2, 0);
+	Text_T doc = File_reader_reader("/home/joe/programming/c/html_parser/data/doc_build_sieve_test.html", NULL);
+	/*Text_T doc = File_reader_reader("data/arni.html", NULL);*/
 
-	while ((*doc).len > 0) {
-		f = Doc_builder_sieve(doc, &chunk);
-		Fmt_fprint(stderr, "f: %s, '%T'\n", Chunk_type_rep(f), &chunk);
+	while (doc.len > 0) {
+		f = Doc_builder_sieve(&doc, &chunk);
+		if (!(f & C_CNTMT)) {
+			Fmt_fprint(stderr, "\033[32m%s\033[m => '%T'\n", 
+					Chunk_type_rep(f), &chunk);
+		}
 	}
 
 	TEST_FUNC_NAME(t);
 
-	return TEST_FAIL;
+	return TEST_SUCCESS;
 }
 
 static int Test_doc_build_builder(T t, void *s, const void *chk)
 {
-	Doc_tree_T *dt;
+	Doc_tree_T tr;
 	char *str;
-	/*Text_T *doc = File_reader_reader("data/file_reader_test.html", NULL);*/
-	Text_T *doc = File_reader_reader("data/doc_build_sieve_test.html", NULL);
-	/*Text_T *doc = File_reader_reader("data/arni.html", NULL);*/
+	/*Text_T doc = File_reader_reader("data/file_reader_test.html", NULL);*/
+	Text_T doc = File_reader_reader("data/doc_build_sieve_test.html", NULL);
+	/*Text_T doc = File_reader_reader("data/arni.html", NULL);*/
 
-	*doc = Text_sub(*doc, 2, 0);
-
-	dt = Doc_builder_builder(doc);
-	
-	Fmt_fprint(stderr, "%s", str = Doc_tree_print(*dt));
-	FREE(str);
-	Fmt_fprint(stdout, "============\n");
-	Fmt_fprint(stdout, "%s", str = Doc_tree_print_context(*dt));
-	FREE(str);
-	Fmt_fprint(stdout, "============\n");
+	tr = Doc_builder_builder(doc);
 
 	TEST_FUNC_NAME(t);
 	/*TEST_FUNC_OUT(t, Doc_tree_print(*dt));*/
 
-	Doc_tree_free(dt);
+	Fmt_fprint(stdout, "==========\n");
+
+	Doc_tree_print(tr);
+	// Doc_tree_free(dt);
 
 	return TEST_FAIL;
 }
